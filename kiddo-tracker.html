@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌸 Grace's Daily Tracker</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Grace" />
+  <meta name="theme-color" content="#f8a4c8" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23f8a4c8'/><text y='.9em' font-size='72' x='50%' dominant-baseline='middle' text-anchor='middle'>🌸</text></svg>" />
+  <style>
+    :root {
+      --pink:     #f8a4c8;
+      --pink-d:   #e87dab;
+      --purple:   #c9a8f5;
+      --purple-d: #a87de0;
+      --yellow:   #ffe08a;
+      --green:    #a8e6c3;
+      --green-d:  #52c98a;
+      --card:     #ffffff;
+      --text:     #4a3555;
+      --muted:    #9b85a8;
+      --shadow:   0 4px 20px rgba(180,120,200,0.13);
+      --radius:   20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #fff0fa 0%, #f0f4ff 100%);
+      min-height: 100vh; color: var(--text);
+      padding: max(20px, env(safe-area-inset-top)) 16px max(60px, env(safe-area-inset-bottom));
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 22px; }
+    .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    header h1 {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--pink-d), var(--purple-d));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 5px; }
+
+    /* ── Tab bar ── */
+    .tab-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 18px; border-radius: 30px; border: 2px solid transparent;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all .2s;
+      background: white; color: var(--muted); box-shadow: 0 2px 8px rgba(180,120,200,.1);
+    }
+    .tab-btn.active { background: linear-gradient(135deg, var(--pink-d), var(--purple-d)); color: white; box-shadow: 0 3px 14px rgba(200,100,180,.3); }
+
+    /* ── Date nav ── */
+    .date-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 22px; }
+    .date-nav button {
+      width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--pink);
+      background: white; color: var(--pink-d); font-size: 1.1rem; cursor: pointer; transition: background .2s;
+    }
+    .date-nav button:hover { background: var(--pink); color: white; }
+    .date-nav button:disabled { opacity: .35; cursor: default; }
+    #dateLabel { font-weight: 700; font-size: 1.05rem; color: var(--text); min-width: 200px; text-align: center; }
+
+    /* ── Section ── */
+    .section { display: none; max-width: 540px; margin: 0 auto; }
+    .section.active { display: block; }
+
+    /* ── Health cards ── */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    @media (max-width: 420px) { .cards { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card); border-radius: var(--radius); padding: 20px 16px;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 9px;
+    }
+    .card .emoji { font-size: 2.4rem; line-height: 1; }
+    .card h2 { font-size: 0.95rem; font-weight: 700; }
+
+    /* ── Counter ── */
+    .counter { display: flex; align-items: center; gap: 12px; }
+    .counter button {
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--purple);
+      background: white; color: var(--purple-d); font-size: 1.2rem; cursor: pointer; transition: background .15s; line-height: 1;
+    }
+    .counter button:hover { background: var(--purple); color: white; }
+    .counter button:disabled { opacity: .3; cursor: default; }
+    .counter .count { font-size: 1.6rem; font-weight: 800; min-width: 32px; text-align: center; color: var(--purple-d); }
+
+    /* ── Toggle btn ── */
+    .toggle-btn {
+      display: flex; align-items: center; gap: 8px; padding: 9px 20px;
+      border-radius: 30px; border: none; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; transition: all .2s; width: 100%; justify-content: center;
+    }
+    .toggle-btn.off { background: #f2eaf8; color: var(--muted); }
+    .toggle-btn.on  { background: linear-gradient(135deg, var(--green), #79dba8); color: #1a6640; box-shadow: 0 3px 12px rgba(82,201,138,.35); }
+    .toggle-btn .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+
+    /* ── Badge ── */
+    .badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: .03em; }
+    .badge.good { background: #dff7ec; color: #1a7a48; }
+    .badge.warn { background: #fff3cc; color: #8a6000; }
+    .badge.none { background: #f5eeff; color: #9070c0; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+    }
+
+    /* ── Daily goals ── */
+    .daily-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+    .goal-card {
+      background: white; border-radius: 18px; padding: 18px 14px;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .goal-card .g-emoji { font-size: 2.2rem; }
+    .goal-card .g-title { font-size: 0.88rem; font-weight: 700; text-align: center; }
+    .goal-card .g-sub   { font-size: 0.72rem; color: var(--muted); text-align: center; }
+
+    /* ── Schedule banner ── */
+    .schedule-banner {
+      background: white; border-radius: 14px; padding: 12px 14px;
+      box-shadow: var(--shadow); margin-bottom: 18px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .sb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .sb-label { font-size: 0.83rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .sb-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sb-chip {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: #ede0ff; color: var(--purple-d);
+    }
+    .sb-chip.school { background: #e0f0ff; color: #1060b0; }
+    .sb-chip.auto   { background: #e0fff0; color: #107050; }
+    .rain-toggle {
+      display: flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 700;
+      color: var(--muted); cursor: pointer; padding: 4px 11px; border-radius: 20px;
+      border: 1.5px solid #ecd8f5; background: white; transition: all .2s;
+    }
+    .rain-toggle.raining { background: #e8f4ff; border-color: #90c0f0; color: #1060a0; }
+
+    /* ── Alt activity tiles (match goal-card style) ── */
+    .alt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+    @media (max-width: 380px) { .alt-grid { grid-template-columns: 1fr; } }
+    .act-chip {
+      background: white; border-radius: 18px; padding: 18px 14px;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 10px;
+      border: 2px solid transparent; cursor: pointer; transition: all .2s;
+    }
+    .act-chip:hover { border-color: var(--purple); }
+    .act-chip .chip-icon { font-size: 2.2rem; line-height: 1; }
+    .act-chip .chip-label { font-size: 0.88rem; font-weight: 700; text-align: center; color: var(--text); }
+    .act-chip .chip-status {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      background: #f5eeff; color: var(--muted); letter-spacing: .03em;
+    }
+    .act-chip.selected { border-color: var(--purple-d); background: linear-gradient(135deg, #f8f0ff, #efe0ff); }
+    .act-chip.selected .chip-label { color: var(--purple-d); }
+    .act-chip.selected .chip-status { background: linear-gradient(135deg, var(--green), #79dba8); color: #1a6640; }
+    .act-chip.auto-sel { border-color: #90c0f0; background: linear-gradient(135deg, #f0f8ff, #e0eeff); }
+    .act-chip.auto-sel .chip-label { color: #1060b0; }
+    .act-chip.auto-sel .chip-status { background: #d0ecff; color: #1060b0; }
+
+    /* ── Weekly alt notice ── */
+    .alt-notice {
+      border-radius: 12px; padding: 9px 14px; font-size: 0.8rem; font-weight: 600;
+      margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+    }
+    .alt-notice.ok   { background: #dff7ec; color: #1a7a48; }
+    .alt-notice.warn { background: #fff3cc; color: #8a6000; }
+
+    /* ── Weekly summary bar ── */
+    .week-bar { background: white; border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    .week-bar h4 { font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .week-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+    .week-dot { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.68rem; color: var(--muted); font-weight: 600; }
+    .week-dot .dot-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;
+    }
+    .dot-circle.today-dot { border: 2px solid var(--pink-d); }
+    .dot-circle.full  { background: var(--green-d); color: white; }
+    .dot-circle.part  { background: var(--yellow); color: #7a5a00; }
+    .dot-circle.empty { background: #f0e8f8; color: var(--muted); }
+
+    /* ── Current Obsession ── */
+    .obsession-card {
+      background: white; border-radius: 18px; padding: 16px;
+      box-shadow: var(--shadow); margin-bottom: 18px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .obsession-header { display: flex; align-items: center; gap: 8px; }
+    .obsession-header .obs-emoji { font-size: 1.5rem; }
+    .obsession-header .obs-title { font-size: 0.9rem; font-weight: 700; }
+    .obsession-header .obs-sub   { font-size: 0.73rem; color: var(--muted); margin-left: auto; }
+    .obsession-input {
+      width: 100%; border: 2px solid #ecd8f5; border-radius: 12px;
+      padding: 9px 12px; font-size: 0.9rem; color: var(--text);
+      font-family: inherit; outline: none; transition: border-color .2s; background: #fdf8ff;
+    }
+    .obsession-input:focus { border-color: var(--purple); background: white; }
+    .obs-streak { font-size: 0.75rem; color: var(--muted); font-style: italic; padding: 4px 0 0 2px; }
+    .obs-streak span { color: var(--purple-d); font-weight: 700; font-style: normal; }
+
+    /* ── Notes ── */
+    .notes-area {
+      width: 100%; border: 2px solid #ecd8f5; border-radius: 14px;
+      padding: 10px 12px; font-size: 0.88rem; color: var(--text);
+      font-family: inherit; resize: vertical; min-height: 72px;
+      transition: border-color .2s; outline: none; background: white;
+    }
+    .notes-area:focus { border-color: var(--purple); }
+
+    /* ── History ── */
+    .history-wrap { margin-top: 8px; }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-row {
+      background: white; border-radius: 14px; padding: 11px 14px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(180,120,200,.08); font-size: 0.84rem; gap: 8px;
+    }
+    .h-left { display: flex; flex-direction: column; gap: 4px; min-width: 80px; }
+    .hdate { font-weight: 700; color: var(--text); white-space: nowrap; }
+    .hobs  { font-size: 0.72rem; color: var(--purple-d); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+    .hicons { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .hchip { display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; }
+    .hchip.poop      { background: #fff3e0; color: #b05000; }
+    .hchip.bath.done { background: #dff7ec; color: #1a7a48; }
+    .hchip.bath.skip { background: #fdeef8; color: #a030a0; }
+    .hchip.read.done { background: #e0f0ff; color: #1060a0; }
+    .hchip.out.done  { background: #e0ffe8; color: #107030; }
+    .hchip.alt.done  { background: #f0e0ff; color: #7030a0; }
+    .empty-history { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 20px; }
+
+    /* ── Clear btn ── */
+    .clear-btn {
+      display: block; margin: 14px auto 0; background: none;
+      border: 1.5px solid #ecd8f5; color: var(--muted);
+      border-radius: 20px; padding: 7px 18px; font-size: 0.8rem; cursor: pointer; transition: all .2s;
+    }
+    .clear-btn:hover { border-color: var(--pink); color: var(--pink-d); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <span style="font-size:2rem">🌸</span>
+    <h1>Grace's Tracker</h1>
+    <span style="font-size:2rem">⭐</span>
+  </div>
+  <p>Grace's Daily Log 👧</p>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="health">🩺 Health</button>
+  <button class="tab-btn" data-tab="activities">🎨 Activities</button>
+  <button class="tab-btn" data-tab="history">📋 History</button>
+</div>
+
+<div class="date-nav">
+  <button id="prevDay">‹</button>
+  <span id="dateLabel"></span>
+  <button id="nextDay">›</button>
+</div>
+
+<!-- TAB 1 · HEALTH -->
+<div class="section active" id="tab-health">
+  <div class="cards">
+    <div class="card">
+      <span class="emoji">💩</span>
+      <h2>Poop</h2>
+      <div class="counter">
+        <button id="poopDec">−</button>
+        <span class="count" id="poopCount">0</span>
+        <button id="poopInc">+</button>
+      </div>
+      <span class="badge" id="poopBadge">—</span>
+    </div>
+    <div class="card">
+      <span class="emoji">🛁</span>
+      <h2>Bath</h2>
+      <button class="toggle-btn off" id="bathBtn">
+        <span class="dot"></span><span id="bathLabel">Not yet</span>
+      </button>
+      <span class="badge" id="bathBadge">—</span>
+    </div>
+  </div>
+  <button class="clear-btn" id="clearHealth">🗑 Clear health data</button>
+</div>
+
+<!-- TAB 2 · ACTIVITIES -->
+<div class="section" id="tab-activities">
+
+  <!-- Schedule banner -->
+  <div class="schedule-banner" id="scheduleBanner">
+    <div class="sb-row">
+      <span class="sb-label" id="sbLabel">📅 Loading schedule…</span>
+      <button class="rain-toggle" id="rainBtn">🌧 It rained</button>
+    </div>
+    <div class="sb-chips" id="sbChips"></div>
+  </div>
+
+  <!-- Daily goals -->
+  <p class="section-label">📌 Daily Goals</p>
+  <div class="daily-goals">
+    <div class="goal-card">
+      <span class="g-emoji">📚</span>
+      <span class="g-title">Reading</span>
+      <span class="g-sub">Every day</span>
+      <button class="toggle-btn off" id="readBtn">
+        <span class="dot"></span><span id="readLabel">Not yet</span>
+      </button>
+    </div>
+    <div class="goal-card">
+      <span class="g-emoji">🌳</span>
+      <span class="g-title">Outdoor</span>
+      <span class="g-sub">Every day</span>
+      <button class="toggle-btn off" id="outBtn">
+        <span class="dot"></span><span id="outLabel">Not yet</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alternate activities -->
+  <p class="section-label">🎯 Alternate Activities <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.75rem;color:var(--muted)">— at least 1 per week</span></p>
+  <div id="altNotice" class="alt-notice warn" style="display:none"></div>
+  <div class="alt-grid" id="altGrid"></div>
+
+  <!-- Current obsession -->
+  <p class="section-label">🔥 Current Obsession</p>
+  <div class="obsession-card">
+    <div class="obsession-header">
+      <span class="obs-emoji">✨</span>
+      <span class="obs-title">What's Grace super into?</span>
+      <span class="obs-sub" id="obsStreakLabel"></span>
+    </div>
+    <input class="obsession-input" id="obsessionInput" type="text" placeholder="e.g. dinosaurs, drawing rainbows, LEGO…" autocomplete="off" />
+    <div class="obs-streak" id="obsStreak"></div>
+  </div>
+
+  <!-- Weekly streak -->
+  <p class="section-label">📅 This Week</p>
+  <div class="week-bar">
+    <h4>Daily goals streak</h4>
+    <div class="week-dots" id="weekDots"></div>
+  </div>
+
+  <!-- Notes -->
+  <p class="section-label">📝 Notes</p>
+  <textarea class="notes-area" id="actNotes" placeholder="What did Grace do today? Any observations…"></textarea>
+
+  <button class="clear-btn" id="clearActivities">🗑 Clear activity data</button>
+</div>
+
+<!-- TAB 3 · HISTORY -->
+<div class="section" id="tab-history">
+  <div class="history-wrap">
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────
+//  Activity list
+// ─────────────────────────────────
+const ALT_ACTIVITIES = [
+  { id: 'english', icon: '🎬', label: 'English Exposure', tip: 'English books, cartoons, movies' },
+  { id: 'stem',    icon: '🧩', label: 'STEM / Puzzles',   tip: 'Puzzles, shapes, math, Lego' },
+  { id: 'nature',  icon: '🌿', label: 'Nature Ed',        tip: 'Gardening, animals, documentaries' },
+  { id: 'art',     icon: '🎨', label: 'Art',              tip: 'Drawing, painting, crafts' },
+  { id: 'music',   icon: '🎵', label: 'Music',            tip: 'Singing, instruments, concerts' },
+  { id: 'social',  icon: '👭', label: 'Social / Playdate',tip: 'Playdates, group play' },
+  { id: 'handson', icon: '🛠️', label: 'Hands-On / Chores',tip: 'Cooking, tidying, building' },
+];
+
+// ─────────────────────────────────
+//  Preschool schedule
+// ─────────────────────────────────
+// School days: Mon–Fri. Ballet alternates every other Wednesday.
+// BALLET_ANCHOR: a known Wednesday that IS a ballet week.
+// We assume this week (the week of June 16, 2026) has ballet.
+// June 18, 2026 is the anchor Wednesday.
+const BALLET_ANCHOR = new Date(2026, 5, 18); // month is 0-indexed
+BALLET_ANCHOR.setHours(0,0,0,0);
+
+function isBalletWeek(date) {
+  const wed = new Date(date);
+  // find the Wednesday of the same week as `date`
+  const day = wed.getDay(); // 0=Sun
+  wed.setDate(wed.getDate() + (day <= 3 ? 3 - day : 3 - day + 7) % 7 - (day > 3 ? 7 : 0));
+  // Actually: find Wednesday of the week containing `date` (Mon-Sun week)
+  const ws = new Date(date);
+  const d = ws.getDay();
+  ws.setDate(ws.getDate() + (d === 0 ? -6 : 1 - d)); // Monday
+  const thisWed = new Date(ws); thisWed.setDate(ws.getDate() + 2);
+  // weeks since anchor (in whole weeks)
+  const diffMs = thisWed - BALLET_ANCHOR;
+  const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  return diffWeeks % 2 === 0;
+}
+
+// Returns schedule info for a given date
+// { isSchoolDay, classes: [{id, icon, label}] }
+function getSchedule(date) {
+  const dow = date.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const isSchoolDay = dow >= 1 && dow <= 5;
+  const classes = [];
+  if (dow === 1) classes.push({ id: 'sport',  icon: '⚽', label: 'Sports class',  altId: null });
+  if (dow === 2) classes.push({ id: 'music',  icon: '🎵', label: 'Music class',   altId: 'music' });
+  if (dow === 3 && isBalletWeek(date))
+               classes.push({ id: 'ballet', icon: '🩰', label: 'Ballet class',   altId: null });
+  return { isSchoolDay, classes };
+}
+
+// ─────────────────────────────────
+//  Storage  (stable key — never change this)
+// ─────────────────────────────────
+const KEY = 'grace_tracker';
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+
+// One-time migration from old versioned keys
+(function migrate() {
+  const OLD_KEYS = ['grace_tracker_v1', 'grace_tracker_v2', 'grace_tracker_v3'];
+  const current = load();
+  let changed = false;
+  OLD_KEYS.forEach(oldKey => {
+    let old; try { old = JSON.parse(localStorage.getItem(oldKey)); } catch { return; }
+    if (!old || typeof old !== 'object') return;
+    Object.keys(old).forEach(k => { if (!current[k]) { current[k] = old[k]; changed = true; } });
+    localStorage.removeItem(oldKey);
+  });
+  if (changed) save(current);
+})();
+
+function dayDefaults() {
+  return { poop: 0, bath: false, read: false, out: false, altDone: [], obsession: '', notes: '', rained: false };
+}
+function getDay(data, key) {
+  if (!data[key]) data[key] = dayDefaults();
+  const d = data[key];
+  // migrate old readMin/outMin
+  if (typeof d.read === 'undefined') d.read = (d.readMin || 0) > 0;
+  if (typeof d.out  === 'undefined') d.out  = (d.outMin  || 0) > 0;
+  if (typeof d.rained === 'undefined') d.rained = false;
+  return d;
+}
+
+// Apply schedule auto-fills to a day — safe to call on existing days too.
+// Only adds entries that aren't already present; never removes manual ones.
+function applyScheduleDefaults(day, date) {
+  const { isSchoolDay, classes } = getSchedule(date);
+  // Outdoor: school day implies outdoor (only set if not explicitly rained)
+  if (isSchoolDay && !day.rained && !day.out) day.out = true;
+  // Class-linked alt activities: add if missing
+  classes.forEach(cls => {
+    if (cls.altId && !(day.altDone || []).includes(cls.altId)) {
+      day.altDone = day.altDone || [];
+      day.altDone.push(cls.altId);
+    }
+  });
+}
+
+// ─────────────────────────────────
+//  Date helpers
+// ─────────────────────────────────
+let currentDate = new Date(); currentDate.setHours(0,0,0,0);
+
+function toKey(d) { return d.toLocaleDateString('en-CA'); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function formatLabel(d) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yest  = addDays(today, -1);
+  if (toKey(d) === toKey(today)) return '📅 Today';
+  if (toKey(d) === toKey(yest))  return '📅 Yesterday';
+  return d.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+}
+function weekStart(d) {
+  const x = new Date(d), day = x.getDay();
+  x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
+  return x;
+}
+
+// ─────────────────────────────────
+//  Build alt chips (once)
+// ─────────────────────────────────
+const altGridEl = document.getElementById('altGrid');
+ALT_ACTIVITIES.forEach(a => {
+  const el = document.createElement('div');
+  el.className = 'act-chip';
+  el.dataset.id = a.id;
+  el.title = a.tip;
+  el.innerHTML = `<span class="chip-icon">${a.icon}</span><span class="chip-label">${a.label}</span><span class="chip-status">Not yet</span>`;
+  el.addEventListener('click', () => toggleAlt(a.id));
+  altGridEl.appendChild(el);
+});
+
+// ─────────────────────────────────
+//  Tab switching
+// ─────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    render();
+  });
+});
+
+// ─────────────────────────────────
+//  Date nav
+// ─────────────────────────────────
+document.getElementById('prevDay').addEventListener('click', () => { currentDate = addDays(currentDate, -1); render(); });
+document.getElementById('nextDay').addEventListener('click', () => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (currentDate < today) { currentDate = addDays(currentDate, 1); render(); }
+});
+
+// ─────────────────────────────────
+//  Update helper
+// ─────────────────────────────────
+function updateDay(fn) {
+  const data = load(), key = toKey(currentDate);
+  getDay(data, key);
+  fn(data[key]);
+  save(data);
+  render();
+}
+
+// ─────────────────────────────────
+//  Health events
+// ─────────────────────────────────
+document.getElementById('poopInc').addEventListener('click', () => updateDay(d => d.poop++));
+document.getElementById('poopDec').addEventListener('click', () => updateDay(d => { if (d.poop > 0) d.poop--; }));
+document.getElementById('bathBtn').addEventListener('click', () => updateDay(d => d.bath = !d.bath));
+document.getElementById('clearHealth').addEventListener('click', () => {
+  if (!confirm('Clear health data for this day?')) return;
+  updateDay(d => { d.poop = 0; d.bath = false; });
+});
+
+// ─────────────────────────────────
+//  Activity events
+// ─────────────────────────────────
+document.getElementById('readBtn').addEventListener('click', () => updateDay(d => d.read = !d.read));
+document.getElementById('outBtn').addEventListener('click',  () => updateDay(d => d.out  = !d.out));
+
+document.getElementById('rainBtn').addEventListener('click', () => {
+  updateDay(d => {
+    d.rained = !d.rained;
+    // If it now rained and outdoor was auto-set by school, clear it
+    const { isSchoolDay } = getSchedule(currentDate);
+    if (d.rained && isSchoolDay) d.out = false;
+    // If rain is cancelled and school day, re-set outdoor
+    if (!d.rained && isSchoolDay) d.out = true;
+  });
+});
+
+function toggleAlt(id) {
+  updateDay(d => {
+    const arr = d.altDone || [], i = arr.indexOf(id);
+    if (i === -1) arr.push(id); else arr.splice(i, 1);
+    d.altDone = arr;
+  });
+}
+
+let obsTimer;
+document.getElementById('obsessionInput').addEventListener('input', e => {
+  clearTimeout(obsTimer);
+  obsTimer = setTimeout(() => {
+    const data = load(), key = toKey(currentDate);
+    getDay(data, key).obsession = e.target.value.trim();
+    save(data);
+    renderObsessionStreak(data);
+  }, 400);
+});
+
+document.getElementById('clearActivities').addEventListener('click', () => {
+  if (!confirm('Clear activity data for this day?')) return;
+  updateDay(d => { d.read = false; d.out = false; d.altDone = []; d.obsession = ''; d.notes = ''; d.rained = false; });
+});
+
+document.getElementById('actNotes').addEventListener('input', e => {
+  const data = load();
+  getDay(data, toKey(currentDate)).notes = e.target.value;
+  save(data);
+});
+
+// ─────────────────────────────────
+//  Render
+// ─────────────────────────────────
+function render() {
+  const data = load(), key = toKey(currentDate);
+
+  // Ensure day exists and schedule defaults are applied (additive, safe to repeat)
+  if (!data[key]) data[key] = dayDefaults();
+  applyScheduleDefaults(data[key], currentDate);
+  save(data);
+
+  const day = getDay(data, key);
+
+  document.getElementById('dateLabel').textContent = formatLabel(currentDate);
+  const today = new Date(); today.setHours(0,0,0,0);
+  document.getElementById('nextDay').disabled = (currentDate >= today);
+
+  renderHealth(day);
+  renderActivities(day, data);
+  renderHistory(data);
+}
+
+function renderHealth(day) {
+  const poop = day.poop || 0;
+  document.getElementById('poopCount').textContent = poop;
+  document.getElementById('poopDec').disabled = (poop === 0);
+  const pb = document.getElementById('poopBadge');
+  if      (poop === 0) { pb.textContent = 'None yet';         pb.className = 'badge none'; }
+  else if (poop <= 2)  { pb.textContent = `✅ ${poop}x`;      pb.className = 'badge good'; }
+  else                 { pb.textContent = `⚠️ ${poop} times`; pb.className = 'badge warn'; }
+
+  const bath = day.bath || false;
+  document.getElementById('bathLabel').textContent = bath ? 'Done! 🎉' : 'Not yet';
+  document.getElementById('bathBtn').className = bath ? 'toggle-btn on' : 'toggle-btn off';
+  const bbg = document.getElementById('bathBadge');
+  bbg.textContent = bath ? '✅ Clean!' : 'Needs bath';
+  bbg.className   = bath ? 'badge good' : 'badge none';
+}
+
+function renderActivities(day, data) {
+  const { isSchoolDay, classes } = getSchedule(currentDate);
+  const rained = day.rained || false;
+
+  // ── Schedule banner ──
+  const label = document.getElementById('sbLabel');
+  const chips = document.getElementById('sbChips');
+  const rainBtn = document.getElementById('rainBtn');
+  chips.innerHTML = '';
+
+  if (isSchoolDay) {
+    label.textContent = '🏫 School day';
+    // School chip
+    const sc = document.createElement('span');
+    sc.className = 'sb-chip school';
+    sc.textContent = '🏫 School';
+    chips.appendChild(sc);
+    // Class chips
+    classes.forEach(cls => {
+      const cc = document.createElement('span');
+      cc.className = 'sb-chip';
+      cc.textContent = cls.icon + ' ' + cls.label;
+      chips.appendChild(cc);
+    });
+    // Outdoor auto chip
+    const oc = document.createElement('span');
+    oc.className = 'sb-chip auto';
+    oc.textContent = rained ? '🌧 Outdoor skipped (rain)' : '🌳 Outdoor auto-checked';
+    chips.appendChild(oc);
+    rainBtn.style.display = 'flex';
+    rainBtn.className = rained ? 'rain-toggle raining' : 'rain-toggle';
+    rainBtn.textContent = rained ? '☀️ No rain' : '🌧 It rained';
+  } else {
+    const dow = currentDate.getDay();
+    label.textContent = dow === 0 || dow === 6 ? '🏖 Weekend — no school' : '🏖 No school today';
+    rainBtn.style.display = 'none';
+  }
+
+  // ── Daily goal toggles ──
+  const readOn = day.read || false;
+  document.getElementById('readLabel').textContent = readOn ? 'Done! 🎉' : 'Not yet';
+  document.getElementById('readBtn').className = readOn ? 'toggle-btn on' : 'toggle-btn off';
+
+  const outOn = day.out || false;
+  document.getElementById('outLabel').textContent = outOn ? 'Done! 🎉' : 'Not yet';
+  document.getElementById('outBtn').className = outOn ? 'toggle-btn on' : 'toggle-btn off';
+
+  // ── Alt chips ──
+  const altDone = day.altDone || [];
+  const autoIds = classes.filter(c => c.altId).map(c => c.altId);
+  document.querySelectorAll('.act-chip').forEach(el => {
+    const id = el.dataset.id;
+    const isSelected = altDone.includes(id);
+    const isAuto     = autoIds.includes(id);
+    const statusEl   = el.querySelector('.chip-status');
+
+    el.classList.remove('selected', 'auto-sel');
+
+    if (isSelected && isAuto) {
+      el.classList.add('auto-sel');
+      statusEl.textContent = '🏫 Class ✓';
+    } else if (isSelected) {
+      el.classList.add('selected');
+      statusEl.textContent = 'Done! 🎉';
+    } else if (isAuto) {
+      statusEl.textContent = '🏫 Today';
+    } else {
+      statusEl.textContent = 'Not yet';
+    }
+  });
+
+  // ── Weekly alt notice ──
+  const ws = weekStart(currentDate);
+  let weekHasAlt = false;
+  for (let i = 0; i < 7; i++) {
+    const dd = data[toKey(addDays(ws, i))];
+    if (dd && dd.altDone && dd.altDone.length > 0) { weekHasAlt = true; break; }
+  }
+  const notice = document.getElementById('altNotice');
+  notice.style.display = 'flex';
+  notice.className = weekHasAlt ? 'alt-notice ok' : 'alt-notice warn';
+  notice.textContent = weekHasAlt
+    ? '✅ Great! At least one alternate activity done this week.'
+    : '⚡ No alternate activity yet this week — try one today!';
+
+  // ── Obsession ── (don't overwrite while user is typing/pasting)
+  if (document.activeElement !== document.getElementById('obsessionInput')) {
+    document.getElementById('obsessionInput').value = day.obsession || '';
+  }
+  renderObsessionStreak(data);
+
+  // ── Notes ── (don't overwrite while user is typing/pasting)
+  if (document.activeElement !== document.getElementById('actNotes')) {
+    document.getElementById('actNotes').value = day.notes || '';
+  }
+
+  // ── Week dots ──
+  renderWeekDots(data);
+}
+
+function renderObsessionStreak(data) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayObs = (data[toKey(today)] || {}).obsession || '';
+  const streakEl = document.getElementById('obsStreak');
+  const labelEl  = document.getElementById('obsStreakLabel');
+  if (!todayObs) { streakEl.textContent = ''; labelEl.textContent = ''; return; }
+  let days = 0;
+  for (let i = 0; i < 90; i++) {
+    const obs = (data[toKey(addDays(today, -i))] || {}).obsession || '';
+    if (obs.toLowerCase() === todayObs.toLowerCase()) days++;
+    else break;
+  }
+  labelEl.textContent = days > 1 ? `${days}-day streak` : '';
+  streakEl.innerHTML  = days > 1 ? `🔥 Grace has been into <span>${todayObs}</span> for ${days} days in a row!` : '';
+}
+
+function renderWeekDots(data) {
+  const ws = weekStart(currentDate);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const container = document.getElementById('weekDots');
+  container.innerHTML = '';
+  const labels = ['M','T','W','T','F','S','S'];
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(ws, i), dk = toKey(d), dd = data[dk];
+    const readOk = dd && dd.read, outOk = dd && dd.out, isFuture = d > today;
+    let cls = 'empty', txt = '·';
+    if (!isFuture) {
+      if (readOk && outOk)      { cls = 'full'; txt = '✓'; }
+      else if (readOk || outOk) { cls = 'part'; txt = '½'; }
+    }
+    const isToday = toKey(d) === toKey(today);
+    const wrap = document.createElement('div');
+    wrap.className = 'week-dot';
+    wrap.innerHTML = `<div class="dot-circle ${cls}${isToday ? ' today-dot' : ''}">${txt}</div><span>${labels[i]}</span>`;
+    container.appendChild(wrap);
+  }
+}
+
+function renderHistory(data) {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+
+  const dk = toKey(currentDate);
+  const day = data[dk];
+  const { poop, bath, read, out, altDone, obsession, notes } = day || {};
+  const hasContent = (poop > 0) || bath || read || out || (altDone && altDone.length) || obsession || notes;
+
+  if (!hasContent) {
+    list.innerHTML = '<div class="empty-history">Nothing logged for this day yet. 🌟</div>';
+    return;
+  }
+
+  const row = document.createElement('div'); row.className = 'history-row';
+
+  // Left: date + obsession
+  const left = document.createElement('div'); left.className = 'h-left';
+  const ds = document.createElement('span'); ds.className = 'hdate';
+  ds.textContent = formatLabel(currentDate).replace('📅 ', '');
+  left.appendChild(ds);
+  if (obsession) {
+    const os = document.createElement('span'); os.className = 'hobs';
+    os.textContent = '✨ ' + obsession; os.title = obsession; left.appendChild(os);
+  }
+
+  // Right: chips
+  const icons = document.createElement('div'); icons.className = 'hicons';
+  if (poop > 0) { const c = document.createElement('span'); c.className = 'hchip poop';      c.textContent = `💩×${poop}`;  icons.appendChild(c); }
+  if (bath)     { const b = document.createElement('span'); b.className = 'hchip bath done'; b.textContent = '🛁 Bath';      icons.appendChild(b); }
+  if (read)     { const r = document.createElement('span'); r.className = 'hchip read done'; r.textContent = '📚 Read';      icons.appendChild(r); }
+  if (out)      { const o = document.createElement('span'); o.className = 'hchip out done';  o.textContent = '🌳 Out';       icons.appendChild(o); }
+  if (altDone && altDone.length) {
+    ALT_ACTIVITIES.filter(a => altDone.includes(a.id)).forEach(a => {
+      const x = document.createElement('span'); x.className = 'hchip alt done';
+      x.textContent = a.icon + ' ' + a.label.split('/')[0].trim(); icons.appendChild(x);
+    });
+  }
+  row.appendChild(left); row.appendChild(icons); list.appendChild(row);
+
+  // Notes block
+  if (notes) {
+    const nb = document.createElement('div');
+    nb.style.cssText = 'background:white;border-radius:12px;padding:10px 14px;box-shadow:0 2px 10px rgba(180,120,200,.08);font-size:0.84rem;color:var(--text);line-height:1.5;margin-top:2px;';
+    nb.textContent = '📝 ' + notes;
+    list.appendChild(nb);
+  }
+}
+
+// ─────────────────────────────────
+//  Init
+// ─────────────────────────────────
+render();
+</script>
+</body>
+</html>
