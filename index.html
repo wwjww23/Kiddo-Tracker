@@ -10,6 +10,47 @@
   <meta name="theme-color" content="#f8a4c8" />
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23f8a4c8'/><text y='.9em' font-size='72' x='50%' dominant-baseline='middle' text-anchor='middle'>🌸</text></svg>" />
   <style>
+    /* ── PIN lock screen ── */
+    #pinOverlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #fff0fa 0%, #f0f4ff 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 28px; padding: 40px 24px;
+    }
+    #pinOverlay .pin-emoji  { font-size: 3.5rem; }
+    #pinOverlay .pin-title  { font-size: 1.3rem; font-weight: 800; color: #4a3555; }
+    #pinOverlay .pin-sub    { font-size: 0.88rem; color: #9b85a8; margin-top: -18px; }
+    .pin-dots {
+      display: flex; gap: 14px;
+    }
+    .pin-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid #e87dab; background: transparent;
+      transition: background .15s;
+    }
+    .pin-dot.filled { background: #e87dab; }
+    .pin-pad {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 14px; width: 100%; max-width: 280px;
+    }
+    .pin-key {
+      aspect-ratio: 1; border-radius: 50%;
+      border: 2px solid #ecd8f5; background: white;
+      font-size: 1.4rem; font-weight: 700; color: #4a3555;
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 12px rgba(180,120,200,0.12);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pin-key:active { background: #f0e0ff; border-color: #a87de0; transform: scale(.93); }
+    .pin-key.del    { font-size: 1.1rem; color: #9b85a8; }
+    .pin-key.empty  { border: none; background: none; box-shadow: none; cursor: default; }
+    .pin-error {
+      font-size: 0.82rem; font-weight: 700; color: #e04070;
+      min-height: 1.2em; transition: opacity .2s;
+    }
+  </style>
+  <style>
     :root {
       --pink:     #f8a4c8;
       --pink-d:   #e87dab;
@@ -242,6 +283,34 @@
 </head>
 <body>
 
+<!-- PIN lock overlay -->
+<div id="pinOverlay">
+  <span class="pin-emoji">🌸</span>
+  <span class="pin-title">Grace's Tracker</span>
+  <span class="pin-sub">Enter your PIN to continue</span>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-error" id="pinError"></div>
+  <div class="pin-pad">
+    <button class="pin-key" data-n="1">1</button>
+    <button class="pin-key" data-n="2">2</button>
+    <button class="pin-key" data-n="3">3</button>
+    <button class="pin-key" data-n="4">4</button>
+    <button class="pin-key" data-n="5">5</button>
+    <button class="pin-key" data-n="6">6</button>
+    <button class="pin-key" data-n="7">7</button>
+    <button class="pin-key" data-n="8">8</button>
+    <button class="pin-key" data-n="9">9</button>
+    <button class="pin-key empty" aria-hidden="true"></button>
+    <button class="pin-key" data-n="0">0</button>
+    <button class="pin-key del" id="pinDel">⌫</button>
+  </div>
+</div>
+
 <header>
   <div class="title-row">
     <span style="font-size:2rem">🌸</span>
@@ -360,6 +429,83 @@
 </div>
 
 <script>
+// ─────────────────────────────────
+//  PIN lock
+// ─────────────────────────────────
+(function () {
+  // PIN is stored as a hash so it's not plaintext in the source
+  const PIN_HASH = 'a602f1b8';   // crc32("0527")
+  function crc32(str) {
+    let c, crc = 0xFFFFFFFF;
+    for (let i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      for (let j = 0; j < 8; j++) {
+        if ((crc ^ c) & 1) crc = (crc >>> 1) ^ 0xEDB88320;
+        else crc >>>= 1;
+        c >>>= 1;
+      }
+    }
+    return ((crc ^ 0xFFFFFFFF) >>> 0).toString(16).padStart(8, '0');
+  }
+
+  const SESSION_KEY = 'grace_unlocked';
+  const overlay     = document.getElementById('pinOverlay');
+  const errorEl     = document.getElementById('pinError');
+  let entry = '';
+
+  // Already unlocked this session?
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  function updateDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('d' + i).classList.toggle('filled', i < entry.length);
+    }
+  }
+
+  function shake() {
+    overlay.animate([
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-10px)' },
+      { transform: 'translateX(10px)' },
+      { transform: 'translateX(-8px)' },
+      { transform: 'translateX(8px)' },
+      { transform: 'translateX(0)' },
+    ], { duration: 380, easing: 'ease-out' });
+  }
+
+  function tryUnlock() {
+    if (crc32(entry) === PIN_HASH) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      overlay.style.transition = 'opacity .3s';
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.style.display = 'none', 300);
+    } else {
+      errorEl.textContent = 'Incorrect PIN — try again';
+      shake();
+      entry = '';
+      updateDots();
+      setTimeout(() => errorEl.textContent = '', 2000);
+    }
+  }
+
+  document.querySelectorAll('.pin-key[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (entry.length >= 4) return;
+      entry += btn.dataset.n;
+      errorEl.textContent = '';
+      updateDots();
+      if (entry.length === 4) setTimeout(tryUnlock, 120);
+    });
+  });
+
+  document.getElementById('pinDel').addEventListener('click', () => {
+    entry = entry.slice(0, -1);
+    updateDots();
+  });
+})();
 // ─────────────────────────────────
 //  Activity list
 // ─────────────────────────────────
